@@ -1,6 +1,6 @@
 extern crate rustyline;
 
-use std::io::{self, Read};
+use std::io::{self, Read, Stderr, Write};
 use std::collections::HashMap;
 use std::process::Command;
 
@@ -34,12 +34,18 @@ impl<'a> Shell<'a> {
             Some(cmd) => {
                 let cmd = cmd.clone();
                 let args = words.collect::<Vec<_>>();
-                let output = Command::new(cmd)
-                    .args(args)
-                    .output()
-                    .expect("faile to run");
-                println!("{}", String::from_utf8(output.stdout).unwrap());
-
+                let mut command = Command::new(cmd);
+                command.args(args);
+                match command.output() {
+                    Ok(output) => {
+                        println!("{}", String::from_utf8(output.stdout).unwrap());
+                    }
+                    _ => {
+                        println!("no such command: {}", cmd);
+                        // TODO: figure out why the below doesn't work
+                        // io::stderr().write(format!("No such command: {}", cmd).as_bytes());
+                    }
+                }
             },
             None => {
                 return // no command!
