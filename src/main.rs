@@ -1,44 +1,90 @@
 extern crate rustyline;
 
 use std::io::{self, Read};
+use std::collections::HashMap;
+use std::process::Command;
+
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
 
 
-fn handle_string(mut rl: &mut Editor<()>, line: String) {
-    rl.add_history_entry(&line);
-    let words = line.split_whitespace();
-    for word in words {
-        println!("{}", word);
-    }
+struct Shell<'a> {
+    builtins: HashMap<&'a str, &'a str>,
+    readline: Editor<()>,
 }
 
-
-fn main() {
-    // `()` can be used when no completer is required
-    let mut rl = Editor::<()>::new();
-    if let Err(_) = rl.load_history("history.txt") {
-        println!("No previous history.");
+impl<'a> Shell<'a> {
+    fn new() -> Shell<'a> {
+        let mut builtins = HashMap::new();
+        builtins.insert("history", "TODO");
+        let mut readline = Editor::<()>::new();
+        if let Err(_) = readline.load_history("history.txt") {
+            println!("No previous history.");
+        }
+        Shell {
+            builtins: builtins,
+            readline: readline,
+        }
     }
-    loop {
-        let readline = rl.readline("$ ");
-        match readline {
+
+    fn handle_string(&mut self, line: String) {
+        self.readline.add_history_entry(&line);
+        let mut words = line.split_whitespace();
+        match words.nth(0) {
+            Some(cmd) => {
+                let cmd = cmd.clone();
+                let args = words.collect::<Vec<_>>();
+                let output = Command::new(cmd)
+                    .args(args)
+                    .output()
+                    .expect("faile to run");
+                println!("{}", String::from_utf8(output.stdout).unwrap());
+
+            },
+            None => {
+                return // no command!
+            }
+        }
+    }
+
+    fn rl(&mut self) -> Result<(), ()> {
+        let line = self.readline.readline("$ ");
+        match line {
             Ok(line) => {
-                handle_string(&mut rl, line);
+                self.handle_string(line);
+                Ok(())
             },
             Err(ReadlineError::Interrupted) => {
                 println!("CTRL-C");
-                break
+                Err(())
             },
             Err(ReadlineError::Eof) => {
                 println!("CTRL-D");
-                break
+                Err(())
             },
             Err(err) => {
                 println!("Error: {:?}", err);
+                Err(())
+            }
+        }
+    }
+
+    fn save_history(&mut self) {
+        self.readline.save_history("history.txt").unwrap();
+    }
+}
+
+fn main() {
+    // `()` can be used when no completer is required
+    let mut shell = Shell::new();
+    loop {
+        match shell.rl() {
+            Ok(_) => {
+                continue;
+            }
+            Err(_) => {
                 break
             }
         }
     }
-    rl.save_history("history.txt").unwrap();
 }
