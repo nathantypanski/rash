@@ -1,0 +1,7 @@
+[package]
+name = "rash"
+version = "0.1.0"
+authors = ["Nathan Typanski <ndt@nathantypanski.com>"]
+
+[dependencies]
+rustyline = "1.0.0"
