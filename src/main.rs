@@ -7,7 +7,10 @@ use rustyline::Editor;
 
 fn handle_string(mut rl: &mut Editor<()>, line: String) {
     rl.add_history_entry(&line);
-    println!("Line: {}", line);
+    let words = line.split_whitespace();
+    for word in words {
+        println!("{}", word);
+    }
 }
 
 
@@ -18,7 +21,7 @@ fn main() {
         println!("No previous history.");
     }
     loop {
-        let readline = rl.readline(">> ");
+        let readline = rl.readline("$ ");
         match readline {
             Ok(line) => {
                 handle_string(&mut rl, line);
