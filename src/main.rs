@@ -5,6 +5,12 @@ use rustyline::error::ReadlineError;
 use rustyline::Editor;
 
 
+fn handle_string(mut rl: &mut Editor<()>, line: String) {
+    rl.add_history_entry(&line);
+    println!("Line: {}", line);
+}
+
+
 fn main() {
     // `()` can be used when no completer is required
     let mut rl = Editor::<()>::new();
@@ -15,8 +21,7 @@ fn main() {
         let readline = rl.readline(">> ");
         match readline {
             Ok(line) => {
-                rl.add_history_entry(&line);
-                println!("Line: {}", line);
+                handle_string(&mut rl, line);
             },
             Err(ReadlineError::Interrupted) => {
                 println!("CTRL-C");
