@@ -3,6 +3,7 @@ extern crate rustyline;
 use std::io::{self, Read, Stderr, Write};
 use std::collections::HashMap;
 use std::process::Command;
+use std::vec::Vec;
 
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
@@ -10,6 +11,7 @@ use rustyline::Editor;
 
 struct Shell<'a> {
     builtins: HashMap<&'a str, &'a str>,
+    history: Vec<String>,
     readline: Editor<()>,
 }
 
@@ -20,30 +22,43 @@ impl<'a> Shell<'a> {
         let mut readline = Editor::<()>::new();
         if let Err(_) = readline.load_history("history.txt") {
             println!("No previous history.");
-        }
+        };
+        let history: Vec<String> = Vec::new();
         Shell {
             builtins: builtins,
+            history: history,
             readline: readline,
         }
+    }
+
+    fn history(&mut self, words: std::str::SplitWhitespace) {
+        println!("{}", self.history.join("\n"));
     }
 
     fn handle_string(&mut self, line: String) {
         self.readline.add_history_entry(&line);
         let mut words = line.split_whitespace();
+        self.history.push(line.clone());
         match words.nth(0) {
             Some(cmd) => {
-                let cmd = cmd.clone();
-                let args = words.collect::<Vec<_>>();
-                let mut command = Command::new(cmd);
-                command.args(args);
-                match command.output() {
-                    Ok(output) => {
-                        println!("{}", String::from_utf8(output.stdout).unwrap());
+                if self.builtins.contains_key(cmd) {
+                    if cmd == "history" {
+                        self.history(words);
                     }
-                    _ => {
-                        println!("no such command: {}", cmd);
-                        // TODO: figure out why the below doesn't work
-                        // io::stderr().write(format!("No such command: {}", cmd).as_bytes());
+                } else {
+                    let cmd = cmd.clone();
+                    let args = words.collect::<Vec<_>>();
+                    let mut command = Command::new(cmd);
+                    command.args(args);
+                    match command.output() {
+                        Ok(output) => {
+                            println!("{}", String::from_utf8(output.stdout).unwrap());
+                        }
+                        _ => {
+                            println!("no such command: {}", cmd);
+                            // TODO: figure out why the below doesn't work
+                            // io::stderr().write(format!("No such command: {}", cmd).as_bytes());
+                        }
                     }
                 }
             },
