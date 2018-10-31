@@ -21,11 +21,22 @@ extern crate rustyline;
 use std::io::{self, Read, Stderr, Write};
 use std::collections::HashMap;
 use std::process::Command;
+use std::process::exit;
 use std::vec::Vec;
 
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
 
+// https://users.rust-lang.org/t/unix-signals-in-rust/733
+// https://github.com/rust-lang/rfcs/issues/1368
+extern "C" {
+  fn signal(sig: u32, cb: extern fn(u32)) -> fn(u32);
+}
+
+extern fn interrupt(_:u32) {
+  println!("Interrupted!");
+  exit(0);
+}
 
 struct Shell<'a> {
     builtins: HashMap<&'a str, &'a str>,
@@ -99,6 +110,9 @@ impl<'a> Shell<'a> {
             },
             Err(ReadlineError::Eof) => {
                 println!("CTRL-D");
+                unsafe {
+                    interrupt(15);
+                }
                 Err(())
             },
             Err(err) => {
@@ -114,6 +128,11 @@ impl<'a> Shell<'a> {
 }
 
 fn main() {
+    unsafe {
+        signal(2, interrupt);
+        signal(15, interrupt);
+    }
+
     // `()` can be used when no completer is required
     let mut shell = Shell::new();
     loop {
